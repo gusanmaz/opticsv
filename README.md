@@ -3,7 +3,7 @@ Software installed for Sekonic SR-1800 Optical Mark Reader(OMR) at my workplace 
 
 Interestingly it seems impossible to identify name of this OMR program from it's GUI. In liue you could find a screenshot of this program which could be helpful for people to figure out if they are using a similar OMR program so that this little code I have wrote migth be handy.
 
-[Sekonic OMR Software SS](/images/sekonic_ss.png)
+![Sekonic OMR Software SS](/images/sekonic_ss.png)
 
 # USAGE
 

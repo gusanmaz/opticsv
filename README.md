@@ -10,19 +10,19 @@ Interestingly it seems impossible to identify name of this OMR program from it's
 Check *ExamInfo* variables defined above function definitions. Modify values of these variables that would reflect your case.
 
     var orgunExamInfo = ExamInfo{
-    	AnswerKeys: []string{
-			"CEAABCDCBCEEABEACBEBECDACEBDDECCDAAEDELABAXCB",
-					"DACEBDDECCDCEAABCDCBCEEDELABAXCBABEACBEBECAAE",
-							"BAXCBBCEEABEACBDEBECCEAABCDCAAEACEBDDECCDDELA",
-									"BCEEDDECCDACEBDDELABAXCBABEACBEBECAAECEAABCDC"},
-										QuestionNumber:        45,
-												       SingleQuestionPoint:   2,
-												       			      DatFilePath:           "oop1.dat",
-															      			     CsvFilePath:           "oop1.csv",
-																		     			    MultipleChoiceLetters: "ABCDE",
-																					    			   ExamSheetLetters:      "ABCD",
-																								   			  StudentNumberLen:      10,
-																											      }
+	AnswerKeys: []string{
+		"CEAABCDCBCEEABEACBEBECDACEBDDECCDAAEDELABAXCB",
+		"DACEBDDECCDCEAABCDCBCEEDELABAXCBABEACBEBECAAE",
+		"BAXCBBCEEABEACBDEBECCEAABCDCAAEACEBDDECCDDELA",
+		"BCEEDDECCDACEBDDELABAXCBABEACBEBECAAECEAABCDC"},
+	QuestionNumber:        45,
+	SingleQuestionPoint:   2,
+	DatFilePath:           "oop1.dat",
+	CsvFilePath:           "oop1.csv",
+	MultipleChoiceLetters: "ABCDE",
+	ExamSheetLetters:      "ABCD",
+	StudentNumberLen:      10,
+    }
 
 
 

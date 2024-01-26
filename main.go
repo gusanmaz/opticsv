@@ -2,100 +2,33 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 )
 
-// If a question has multiple answers it is represented with a different letter than multiple choice letters
-// E.g. if both choice A and D is correct answer of the regarding question is denoted with letter H
 var multipleAnswerMap = map[byte]string{
-	'F': "AB",
-	'G': "AC",
-	'H': "AD",
-	'I': "AE",
-	'J': "BC",
-	'K': "BD",
-	'L': "BE",
-	'M': "CD",
-	'N': "CE",
-	'O': "DE",
-	'X': "ABCDE",
-}
-
-type ExamInfo struct {
-	AnswerKeys            []string
-	QuestionNumber        int
-	SingleQuestionPoint   float64
-	StudentNumberLen      int
-	DatFilePath           string
-	CsvFilePath           string
-	MultipleChoiceLetters string
-	ExamSheetLetters      string
-}
-
-/* Change values of ExamInfo variables according to your needs */
-
-var orgunExamInfo = ExamInfo{
-	AnswerKeys: []string{
-		"CEAABCDCBCEEABEACBEBECDACEBDDECCDAAEDELABAXCB",
-		"DACEBDDECCDCEAABCDCBCEEDELABAXCBABEACBEBECAAE",
-		"BAXCBBCEEABEACBDEBECCEAABCDCAAEACEBDDECCDDELA",
-		"BCEEDDECCDACEBDDELABAXCBABEACBEBECAAECEAABCDC"},
-	QuestionNumber:        45,
-	SingleQuestionPoint:   2,
-	DatFilePath:           "oop1.dat",
-	CsvFilePath:           "oop1.csv",
-	MultipleChoiceLetters: "ABCDE",
-	ExamSheetLetters:      "ABCD",
-	StudentNumberLen:      10,
-}
-
-var geceExamInfo = ExamInfo{
-	AnswerKeys: []string{
-		"EDBDDDDEAABADCDEDEBECDCACBDAEECDAAAEECAABAXCB",
-		"DCDEDEAEECDDBDDDDEAABABAXCBEBECDCACBDEECAAAAA",
-		"BAXCBEBECDEDBDDDEDCDEDDCACBDAEECDAAAEECAAAABA",
-		"AEECDAAABDDDEDDEDBAXCBEBECDEDCDCACBDAABAEECAA"},
-	QuestionNumber:        45,
-	SingleQuestionPoint:   2,
-	DatFilePath:           "oop2.dat",
-	CsvFilePath:           "oop2.csv",
-	MultipleChoiceLetters: "ABCDE",
-	ExamSheetLetters:      "ABCD",
-	StudentNumberLen:      10,
-}
-
-// Readln returns a single line (without the ending \n)
-// from the input buffered reader.
-// An error is returned iff there is an error with the
-// buffered reader.
-func Readln(r *bufio.Reader) (string, error) {
-	var (
-		isPrefix bool  = true
-		err      error = nil
-		line, ln []byte
-	)
-	for isPrefix && err == nil {
-		line, isPrefix, err = r.ReadLine()
-		ln = append(ln, line...)
-	}
-	return string(ln), err
+	'F': "AB", 'G': "AC", 'H': "AD", 'I': "AE", 'J': "BC",
+	'K': "BD", 'L': "BE", 'M': "CD", 'N': "CE", 'O': "DE", 'X': "ABCDE",
 }
 
 func compare(teacher, student string) int {
-	var correctCount = 0
-
+	correctCount := 0
 	for question, answer := range teacher {
+		studentAnswer := student[question]
+		if studentAnswer == ' ' {
+			continue
+		}
+
 		multipleAnswers, ok := multipleAnswerMap[byte(answer)]
 		if ok {
-			if strings.Index(multipleAnswers, string(student[question])) != -1 {
+			if strings.Contains(multipleAnswers, string(studentAnswer)) {
 				correctCount++
 			}
 		} else {
-			if byte(answer) == student[question] {
+			if byte(answer) == studentAnswer {
 				correctCount++
 			}
 		}
@@ -103,82 +36,96 @@ func compare(teacher, student string) int {
 	return correctCount
 }
 
-func getPoint(answerKeys []string, studentAnswers string, sheetType string, ppq float64) int {
-	// Modify sheetLetters string if your exam sheets have different bear different set of letters!
-	sheetLetters := "ABCDE"
-	sheetIndex := strings.Index(sheetLetters, sheetType)
-	// In case sheet type is not marked on student answer key
-	if sheetIndex == -1 {
-		sheetIndex = 0
-	}
-	answerKey := answerKeys[sheetIndex]
+func getPoint(answerKey string, studentAnswers string, ppq float64) int {
 	correctCnt := compare(answerKey, studentAnswers)
 	return int(float64(correctCnt) * ppq)
 }
 
-func processExam(info ExamInfo) {
-	/* Below could be found an excerpt of content of a anonymised dat file:
-	    JOHN DOE            2  9174968307DBDECEAECCDAAEBCDACABAACBABEADBEBECAAECEADBCDC
-		JANE DOE            2  2142656541AADAEDCBDCDECACBADCDEBAEACDBABAEECAAEAAAABAAEB
-		FOO BAR             2  3439648052DBDEBEBECBDACEBDDCCABAACBADEAEBEBDCAAADBAAADBE
-		GOO FOO             2  5657676027BAACEDCBECBDCEAAEADDBCECBDEABAADBABEDCECABAAAE
-		BAR JANE            2  7758686991BBBDEBCCBBDDADDEBADCBAEBEBACCCACECAABEBCCDEACB
-	*/
-
-	dataFile, err := os.Open(info.DatFilePath)
+func processExam(datFilePath, keyFilePath string) {
+	dataFile, err := os.Open(datFilePath)
+	if err != nil {
+		fmt.Printf("Error opening data file: %v\n", err)
+		return
+	}
 	defer dataFile.Close()
 
+	csvFile, err := os.Create(strings.TrimSuffix(datFilePath, ".dat") + ".csv")
 	if err != nil {
-		fmt.Printf("Error opening file: %v\n", err)
-		os.Exit(1)
+		fmt.Printf("Error creating CSV file: %v\n", err)
+		return
 	}
-
-	csvFile, err := os.Create("orgun.csv")
 	defer csvFile.Close()
 
+	keyFile, err := os.Open(keyFilePath)
 	if err != nil {
-		fmt.Printf("Error creating file: %v\n", err)
-		os.Exit(1)
+		fmt.Printf("Error opening key file: %v\n", err)
+		return
+	}
+	defer keyFile.Close()
+
+	scanner := bufio.NewScanner(keyFile)
+	var answerKeys []string
+	for scanner.Scan() {
+		answerKeys = append(answerKeys, scanner.Text())
 	}
 
-	answerKeys := info.AnswerKeys
+	totalQuestions := len(answerKeys[0])
+	ppq := 100.0 / float64(totalQuestions)
 
-	regExpStr := "([0-9]{" + strconv.Itoa(info.StudentNumberLen) + "})([" + info.ExamSheetLetters + "])([* " +
-		info.MultipleChoiceLetters + "]{" + strconv.Itoa(info.QuestionNumber) + "})"
-	//var matchExp = regexp.MustCompile(`([0-9]{10})([ABCD])([ABCDE* ]{50})`)
-	var matchExp = regexp.MustCompile(regExpStr)
+	dataScanner := bufio.NewScanner(dataFile)
+	regExpStr := fmt.Sprintf(`([0-9]{1,%d})([A-D])((?:[A-E ]){%d})`, 10, totalQuestions)
+	matchExp := regexp.MustCompile(regExpStr)
 
-	dataReader := bufio.NewReader(dataFile)
-	s, e := Readln(dataReader)
 	studentCnt := 0
 	gradeSum := 0
-	for e == nil {
-		matches := matchExp.FindStringSubmatch(s)
-		studentNo := matches[1]
-		letter := matches[2]
-		studentAnswers := matches[3]
 
-		point := getPoint(answerKeys, studentAnswers, letter, info.SingleQuestionPoint)
-		fmt.Println(studentNo + "->" + strconv.Itoa(point))
-		fileLine := studentNo + ";" + strconv.Itoa(point) + "\n"
-		csvFile.WriteString(fileLine)
+	for dataScanner.Scan() {
+		line := dataScanner.Text()
+		matches := matchExp.FindStringSubmatch(line)
+		if matches == nil {
+			fmt.Println("Invalid record:", line)
+			continue
+		}
 
-		s, e = Readln(dataReader)
+		studentNo, sheetType, studentAnswers := matches[1], matches[2], matches[3]
+		if len(studentNo) < 10 {
+			fmt.Printf("Incomplete student number: %s. Record will not be included in CSV.\n", studentNo)
+		}
+
+		sheetIndex := strings.Index("ABCD", sheetType)
+		if sheetIndex == -1 || sheetIndex >= len(answerKeys) {
+			fmt.Println("Invalid sheet type for student:", studentNo)
+			continue
+		}
+
+		point := getPoint(answerKeys[sheetIndex], studentAnswers, ppq)
+		if len(studentNo) == 10 {
+			fmt.Fprintf(csvFile, "%s;%d\n", studentNo, point)
+		} else {
+			fmt.Printf("Error for student with incomplete number %s: Calculated points %d\n", studentNo, point)
+		}
+
 		studentCnt++
 		gradeSum += point
 	}
 
 	avg := float64(gradeSum) / float64(studentCnt)
-	avgStr := strconv.FormatFloat(avg, 'f', 6, 64)
-	fmt.Println("Student Number: " + strconv.Itoa(studentCnt) + " Avg: " + avgStr)
+	fmt.Printf("Processed %d students. Average score: %.2f\n", studentCnt, avg)
 }
 
 func main() {
+	filename := flag.String("filename", "", "Base filename for the .dat and .key files (without extension)")
+	flag.Parse()
 
-	examInfos := []ExamInfo{orgunExamInfo, geceExamInfo}
-
-	for _, examInfoVal := range examInfos {
-		processExam(examInfoVal)
+	if *filename == "" {
+		fmt.Println("Filename is required. Use -filename flag to specify it.")
+		os.Exit(1)
 	}
 
+	datFilePath := *filename + ".dat"
+	keyFilePath := *filename + ".key"
+
+	processExam(datFilePath, keyFilePath)
 }
+
+//![Sekonic OMR Software SS](/images/sekonic_ss.png)
